@@ -1,0 +1,328 @@
+
+# Introdução
+
+No capítulo anterior, fomos introduzidos aos conceitos básicos de programação no *R*. Nesse capítulo, iremos conhecer uma poderosa ferramenta organização de dados no *R*, o pacote *dplyr*. Ele será bastante útil quando você tiver palavras, frases ou mesmos textos longos dispostos numa tabela e quer extrair ou identificar padrões desses textos para criar, transformar, substituir ou remover colunas ou linhas da mesma tabela.
+
+## Por que usar o dplyr?
+
+* Extraordinária capacidade de transformação dos dados
+* Escrita intuitiva e de fácil leitura
+* Rápido
+
+
+## Funcionamento do dplyr
+
+* Cinco verbos básicos: `filter`, `select`, `arrange`, `mutate`, `summarise` (além do `group_by`)
+* Permite trabalhar com dados relacionais [data tables](http://datatable.r-forge.r-project.org/)
+* Fusões: inner join, left join, semi-join, anti-join 
+* Funções de agregação
+* Funções janela para calcular ranqueamento, balanceamento e diferenças
+
+## Carregando o dplyr e o base exemplo
+
+* dplyr mascara algumas funções do pacote base
+* Se você também usar plyr, carregue este antes
+* 
+```{r}
+# Carregando os pacotes
+suppressMessages(library(tidyverse))
+
+```
+
+* `tbl_df` cria uma  "data frame local"
+* Data frame local é simplesmente um wrapper de um data frame que imprime de forma mais atraente e intuitiva.
+
+```{r}
+# converte para data frame local
+flights <- tbl_df(hflights)
+# print mostra apenas 10 linhas e tantas colunas quanto couberem na sua tela
+flights
+```
+
+```{r results='hide'}
+# você pode especificar que quer mais linhas
+print(flights, n=20)
+# converter para data frame normal para ver todas as colunta
+data.frame(head(flights))
+```
+
+
+## filter: Mantêm linhas usando um critério
+
+* A abordagem do R Base força a repedir o nome do data frame
+* A abordagem do dplyr é simples para escrever e ler
+* Estrutura de comando para todos os verbos dplyr:
+  * primeiro argumento é um data frame
+* o valor resposta é um data frame
+* nada é modificado no lugar
+* Obs: o dplyr geralmente não preserva nomes de linhas
+
+```{r results='hide'}
+# Abordagem R base para ver todos os voos no dia 1 de Janeiro
+flights[flights$Month==1 & flights$DayofMonth==1, ]
+```
+
+```{r}
+# abordagem dplyr
+# obs: você pode usar vírgula ou e comercial (&) para representar condição E
+filter(flights, Month==1, DayofMonth==1)
+# Use barra vertical para condição OU
+filter(flights, UniqueCarrier=="AA" | UniqueCarrier=="UA")
+```
+
+```{r results='hide'}
+# você pode também usar o operador %in%
+filter(flights, UniqueCarrier %in% c("AA", "UA"))
+```
+
+
+## select: Selecionar colunas por nome
+
+* Abordagem do R base é estranha para escrever e ler
+* abordagem dplyr usa sintaxe similar ao `filter`
+* Como L SELECT no SQL
+
+```{r results='hide'}
+# Abordagem R base para selecionar colunas DepTime, ArrTime, e FlightNum
+flights[, c("DepTime", "ArrTime", "FlightNum")]
+```
+
+```{r}
+# abordagem dplyr
+select(flights, DepTime, ArrTime, FlightNum)
+# use dois pontos para selecionar múltiplas colunas contiguas e `contains` para selecionar colunas quem contenham certos caracteres no nome
+# nota: `starts_with`, `ends_with`, e `matches` (para expressões regulares) também pode ser usada para selecionar colunas por nome
+select(flights, Year:DayofMonth, contains("Taxi"), contains("Delay"))
+```
+
+
+## "Encadeamento" ou "Pipelining"
+
+* A maneira comum de realizar múltiplas operações em uma linha é usar aninhamento (nesting)
+* Pipes permitem escrever os comandos numa ordem natural por meio do uso do símbolo %>% (que pode ser pronunciado como "então")
+
+```{r results='hide'}
+# Método de aninhamento para selecionar as colunas  UniqueCarrier and DepDelay e  filter para atrasos por mais de 60 minutos
+filter(select(flights, UniqueCarrier, DepDelay), DepDelay > 60)
+```
+
+```{r}
+# método de encadeamento (pipelining)
+flights %>%
+  select(UniqueCarrier, DepDelay) %>%
+  filter(DepDelay > 60)
+```
+
+* Encadeamento aumenta significativamente a  legibilidade quando há muitos comandos
+* O operador é importado automaticamente do pacote [magrittr](https://github.com/smbache/magrittr)
+* Pode ser usado para substituir comandos aninhados fora do dplyr
+
+```{r results='hide'}
+# cria dois vetores e calcula a distância euclidiana entre eles
+x1 <- 1:5; x2 <- 2:6
+sqrt(sum((x1-x2)^2))
+```
+
+```{r}
+# método de encadeamento
+(x1-x2)^2 %>% sum() %>% sqrt()
+```
+
+
+## arrange: Reordenar linhas
+
+```{r results='hide'}
+# Abordagem do R base para selecionar as colunas UniqueCarrier and DepDelay e classificar por  DepDelay
+flights[order(flights$DepDelay), c("UniqueCarrier", "DepDelay")]
+```
+
+```{r}
+# abordagem dplyr
+flights %>%
+  select(UniqueCarrier, DepDelay) %>%
+  arrange(DepDelay)
+```
+
+```{r results='hide'}
+# use `desc` para ordem descentente
+flights %>%
+  select(UniqueCarrier, DepDelay) %>%
+  arrange(desc(DepDelay))
+```
+
+
+## mutate: Adicionar novas variáveis
+
+* Cria novas variáveis que são funções das variáveis já existentes
+
+```{r results='hide'}
+# abordagem do R base para criar a nova variável speed (em mph)
+flights$Speed <- flights$Distance / flights$AirTime*60
+flights[, c("Distance", "AirTime", "Speed")]
+```
+
+```{r}
+# abordagem dplyr (imprime a nova variável, mas não salva)
+flights %>%
+  select(Distance, AirTime) %>%
+  mutate(Speed = Distance/AirTime*60)
+# salva a nova variável
+flights <- flights %>% mutate(Speed = Distance/AirTime*60)
+```
+
+
+## summarise: Reduz as variáveis a valores
+
+* Especialmente útil com dados a serem agrupados com base em uma ou mais variáveis
+* `group_by` cria os grupos com base nos  quais os verbos irão operar
+* `summarise` usa a função de agregação para sumariar cada grupo
+
+```{r results='hide'}
+# Abordagem base do R calcula a média de atrasos nos pousos para cada destinação
+head(with(flights, tapply(ArrDelay, Dest, mean, na.rm=TRUE)))
+head(aggregate(ArrDelay ~ Dest, flights, mean))
+```
+
+```{r}
+# abordagem dplyr: cria uma tabela agrupada por Dest e sumariza cada grupo tirando a média de ArrDelay
+flights %>%
+  group_by(Dest) %>%
+  summarise(avg_delay = mean(ArrDelay, na.rm=TRUE))
+```
+
+* `summarise_all` permite você aplicar a mesma função de sumarização para múltiplas colunas de uma vez
+* Nota: `mutate_all` também está disponível
+
+```{r}
+# Para cada companhia, calcule a porcentagem de voos cancelados ou alterados
+flights %>%
+  group_by(UniqueCarrier) %>%
+  summarise_at(c("Cancelled", "Diverted"), mean)
+# para cada companhia, calcule os atrasos  mínimos e máximos de chegada e partida
+flights %>%
+  group_by(UniqueCarrier) %>%
+  summarise_at(vars(contains("Delay")),funs(min(., na.rm=TRUE), max(., na.rm=TRUE)))
+```
+
+* A função `n()` conta o número de linhas em um grupo
+* A função  `n_distinct(vector)` conta o número de ítens únicos naquele vetor
+
+```{r}
+# para cada dia do ano, contar o número de total de voos e classifique em ordem descendente
+flights %>%
+  group_by(Month, DayofMonth) %>%
+  summarise(flight_count = n()) %>%
+  arrange(desc(flight_count))
+# reescrevendo de forma mais simples com a função tally
+flights %>%
+  group_by(Month, DayofMonth) %>%
+  tally(sort = TRUE)
+# para cada destino, contar o número de voos e o número de aviões diferentes que voaram para lá.
+flights %>%
+  group_by(Dest) %>%
+  summarise(flight_count = n(), plane_count = n_distinct(TailNum))
+```
+
+* Agrupar pode ser útil sem necessariamente sumariar
+
+```{r}
+# para cada destino, mostre o número de voos cancelados e não cancelados
+flights %>%
+  group_by(Dest) %>%
+  select(Cancelled) %>%
+  table() %>%
+  head()
+```
+
+
+## Funções janela
+
+* Funções de agragação  (exemplo `mean`) toma n valores e retorna um valor
+* [Window function](http://cran.r-project.org/web/packages/dplyr/vignettes/window-functions.html) toma n valores e retorna n valores
+* Inclem-se aqui funções de ranqueamento e classificação (como `min_rank`), funções de contrabaleceamento (`lead` and `lag`), e funções cumulativas (like `cummean`).
+
+```{r results='hide'}
+# para cada companhia, calcule quais foram os dois dias do país em que houve maiores atrasos nas partidas
+# nota: o menor  (não o maior) valor é ranqueado como 1, de modo que você deve usar `desc` para ranquear pelo maior valor
+flights %>%
+  group_by(UniqueCarrier) %>%
+  select(Month, DayofMonth, DepDelay) %>%
+  filter(min_rank(desc(DepDelay)) <= 2) %>%
+  arrange(UniqueCarrier, desc(DepDelay))
+```
+
+```{r}
+# reescreva de maneira mais simples com a função `top_n`
+flights %>%
+  group_by(UniqueCarrier) %>%
+  select(Month, DayofMonth, DepDelay) %>%
+  top_n(2) %>%
+  arrange(UniqueCarrier, desc(DepDelay))
+# Para cada mês, calcule o número de voos e a mudança em relação ao mês anterior
+flights %>%
+  group_by(Month) %>%
+  summarise(flight_count = n()) %>%
+  mutate(change = flight_count - lag(flight_count))
+# Rescreva novamente simplificando com a função `tally` 
+flights %>%
+  group_by(Month) %>%
+  tally() %>%
+  mutate(change = n - lag(n))
+```
+
+
+## Outras funções úteis e convenientes
+
+```{r}
+# Seleção aleatória de um número fixo de linhas, sem substituição
+flights %>% sample_n(5)
+# Seleção aleatória de de uma fração de linhas, com substituição
+flights %>% sample_frac(0.25, replace=TRUE)
+# Abordagem do R base para ver os os objetos
+str(flights)
+# Abordagem dplyr: melhor formatação e se adapta à largura de sua tela
+glimpse(flights)
+```
+
+
+## Conecção com base relacionais
+
+* dplyr pode se conectar com bases relacionais como se elas estivessem carregadas em um data frame.
+* Uso da mesma sintax de data frames locais
+* Somente gera SELECT declarações
+* Atualmente suporta SQLite, PostgreSQL/Redshift, MySQL/MariaDB, BigQuery e MonetDB
+* O exemplo abaixo é baseado no SQLite contendo a base hflights
+* Instruções para criar databases está em [databases vignette](http://cran.r-project.org/web/packages/dplyr/vignettes/databases.html)
+
+```{r eval=F}
+# conectar a uma base SQLite contendo dados hflights 
+my_db <- src_sqlite("my_db.sqlite3")
+# conectar a uma tablea SQLite na base
+flights_tbl <- tbl(my_db, "hflights")
+# exemplo de query usando dplyr
+flights %>%
+  select(UniqueCarrier, DepDelay) %>%
+  arrange(desc(DepDelay))
+```
+
+* Você mesmo pode escrever comandos SQL
+* dplyr pode informar ao SQL que pretende rodar o plano de execução de sql
+
+```{r eval=F}
+# envie comandos SQL para o data frame
+tbl(my_db, sql("SELECT * FROM hflights LIMIT 100"))
+# peça ao dplyr pelo SQL comando
+flights_tbl %>%
+  select(UniqueCarrier, DepDelay) %>%
+  arrange(desc(DepDelay)) %>%
+  explain()
+```
+
+
+## Recursos
+
+* [Referência oficial do dplyr 
+   CRAN](http://cran.r-project.org/web/packages/dplyr/index.html): vinhetas são bem escritas e cobrem todos os aspectos do dplyr
+
+* [dplyr tutorial by Hadley Wickham](https://www.dropbox.com/sh/i8qnluwmuieicxc/AAAgt9tIKoIm7WZKIyK25lh6a) at the [useR! 2014 conference](http://user2014.stat.ucla.edu/): excelente tutorial)
+* [dplyr GitHub repo](https://github.com/hadley/dplyr) e [lista de publicações](https://github.com/hadley/dplyr/releases)

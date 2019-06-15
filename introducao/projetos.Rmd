@@ -1,0 +1,94 @@
+---
+title: "Criando projetos com Git, Github e Rstudio"
+author: "José de Jesus Filho"
+date: "12/06/2019"
+output: 
+  html_document:
+   keep_md: yes
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Criando projetos com GIT, Github e RStudio
+
+O primeiro passo para uma análise de dados bem sucedida é organizar o seu espaço de trabalho, ou seja, montar um projeto, criar pastas adequadas, padronizar nomes e rotinas. Três ferramentas importantes para o analista de dados bem organizado são o [GIT](https://git-scm.com/), o [Github](https://github.com/) e [Rstudio](https://www.rstudio.com/). 
+
+O Git permite o versionamento do código, ou seja,  que você mantenha controle de todas as versões do seu código. O Github hospeda os repositórios criados por você e controlados  pelo GIT, de modo que você pode acessá-los via Web, partilhar e criar um ambiente de colaboração com outras pessoas. O Rstudio é seu ambiente de trabalho. Nele você cria e desenvolve seus projetos.
+
+Para aprender um pouco mais o GIT e o Github tem esse [tutorial](http://gabsferreira.com/instalando-o-git-e-configurando-github/) bem bacana.
+
+### Vantagens de usar GIT e Github
+
+- Você mantêm-se organizado durante todo o trabalho;
+
+- Outras pessoas podem colaborar com seu projeto;
+
+- Sua produção está disponível para acesso público, quando permitido.
+
+### Passo a passo
+
+1. Instalar R/Rstudio no seu computador;
+2. Instalar o Git no seu computador;
+3. Criar uma conta no Github
+4. Criar um projeto
+5. Criar arquivos
+6. Comitar o projeto
+7. Carregar o projeto no Github
+8. Continuar passos 5 a 7 continuamente.
+
+## Trabalhando com o projeto
+
+Nesse momento, é importante criar um script, o qual permirá reproduzir toda a rotina de trabalho. No R não é possível dar desfazer comandos, mas é possível refazer toda a rotina.
+
+### Importando a base de dados
+
+```{r message=F, eval=F}
+churn <- read_delim("data/BASE_TREINAMENTO.csv",";", escape_double = FALSE, locale = locale(decimal_mark = ",", grouping_mark = "."), trim_ws = TRUE)
+```
+
+Se a base for muito grande, é recomendável usar o pacote data.table. Ele é rápido e eficiente.
+
+```{r message=F, eval=F}
+data.table::fread("base_treinamento.csv")
+```
+
+Para ler excel, há dois pacotes muito bons.
+
+```{r message=F, eval=F}
+readxl::read_excel("base_treinamento.xlsx")
+openxlsx::read.xlsx("base_treinamento.xlsx")
+```
+
+Outros formatos também são possíveis. Para ler de SPSS, Stata e SAS, recomenda-se usar o pacote foreign.
+
+```{r message=F, eval=F}
+churn<-foreign::read.spss("file.sav",to.data.frame=TRUE)
+churn<-foreign::read.dta("file.dta")
+churn <- read.ssd("base", "base_treinamento")
+```
+
+
+### Exportando a base de dados para diferentes formatos
+
+É possível exportar a base de dados para diferentes formatos. Os formatos nativos do R são RDS e RData.
+
+```{r message=F, eval=F}
+saveRDS(churn,"churn.rds")
+save(churn,"churn.RData")
+```
+
+Você também pode exportar para csv, txt ou excel.
+
+```{r message=F, eval=F}
+readr::write_csv(churn,"churn.csv")
+readr::write_delim(churn,"churn.txt",delim="\t")
+```
+
+
+## Trabalhando com a base 
+
+Agora que importamos a base, podemos iniciar por criar um Codebook ou um dicionário de variáveis.
+

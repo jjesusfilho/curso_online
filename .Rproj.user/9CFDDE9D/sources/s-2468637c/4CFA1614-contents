@@ -1,0 +1,12 @@
+## se pak não der certo
+
+install.packages("devtools")
+
+devtools::install_github("jjesusfilho/tjsp")
+devtools::install_github("jjesusfilho/stf")
+devtools::install_github("courtsbr/esaj")
+
+pak::pkg_install("courtsbr/abjutils")
+
+
+
