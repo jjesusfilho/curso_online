@@ -1,0 +1,84 @@
+---
+title: "Análise de dados judiciais"
+subtitle: "Regressão logística binária"
+author: "José de Jesus Filho"
+institute: "Escola jurimétrica"
+date: "20/06/2019 (atualizado: `r format(Sys.Date(),'São Paulo, %d de %B de %Y')`)"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: true
+---
+class: justified, middle
+
+# Quando usar regressão logística binária
+
+Quando a variável resposta for binária e assumir a forma 0/1, você deve utilizar os modelos logit ou probit. O exemplo típico no direito seria a decisão judicial favorável ou desfavorável:
+
+- Condenação vs absolvição;
+- Voto unânime vs voto por maioria;
+- Deferimento vs indeferimento;
+- Provimento vs improvimento;
+- Procedência vs improcedência;
+- Concessão vs denegação.
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+---
+# Carregar pacotes e base
+
+```{r eval=TRUE}
+vd<-readRDS("../data/vd.rds")
+
+```
+
+```{r message=FALSE, warning=FALSE,cache=FALSE}
+library(tibble)
+glimpse(vd)
+```
+---
+## Especificação do modelo
+
+```{r cache=TRUE}
+modelo <- glm(decisao~camara+origem+apelante,data=vd,family=binomial("logit"))
+```
+
+---
+```{r}
+summary(modelo)
+```
+
+---
+```{r message=FALSE,warning=FALSE,eval=require('DT'), tidy=FALSE,eval=FALSE,echo=TRUE}
+library(magrittr)
+  broom::tidy(modelo) %>% 
+  #as.data.frame() %>% 
+  DT::datatable(
+    extensions='Scroller', options = list(#pageLength = 8,
+ scroller=TRUE,scrollY=200,scrollX=10)
+  )
+```
+---
+
+```{r message=FALSE,warning=FALSE,eval=require('DT'), tidy=FALSE,echo=FALSE}
+library(magrittr)
+  broom::tidy(modelo) %>% 
+  #as.data.frame() %>% 
+  DT::datatable(
+    extensions='Scroller', options = list(pageLength = 20,deferRender = TRUE, dom='ft',
+ scroller=TRUE,scrollY=200,scrollX=10)
+  )
+```
+
+---
+
+## Interpretação
+
+
+

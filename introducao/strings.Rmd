@@ -1,0 +1,328 @@
+# (PART) Characteres {-}
+
+# Manuseio básico de caracteres  {#chars}
+
+## Introdução
+
+Para o manuseio de *strings*, embora o R base ofereça um excelente material, optamos por adotar o tidyverse. Não somente para a organização de dados, mas também para a conversão, transformação, extração e substituição de *strings*. O conjunto de pacotes __tidyverse__ oferece uma resposta mais coerente  e sistematizada. O R base é bom, mas apresenta algumas inconsistências. 
+
+Vejamos um exemplo.
+
+Um comportamento estranho acontece com a função `paste()`. O separador padrão é um espaço em branco, que muito frequentemente é o que pretendemos usar. No entanto, isso é algo secundário. Estranho é quando queremos incluir um argumento de tamanho zero (e.g. `NULL`, `character(0)`). Como `paste()` se comporta nesses casos? Veja abaixo:
+
+
+```{r paste_usp_ex, tidy=FALSE}
+# esse exemplo funciona bem
+paste("Universidade", "de", "São", "Paulo")
+
+# esse funciona bem também
+paste("Universidade", "de", "São", "Paulo")
+
+# esse é estranho
+paste("Universidade", "de", "São", "Paulo", NULL)
+
+# esse é ainda mais estranho
+paste("Universidade", "de", "São", "Paulo", NULL, character(0), 
+      "é excelente")
+```
+
+Note a resposta do último exemplo (denominada _feia_). Os objetos `NULL` e `character(0)` têm tamanho zero, mas são tratados como se fossem uma *string* vazia `""`. Não seria melhor se `paste()` removesse os argumentos de tamanho zero? Infelizmente não há nada que podemos fazer para alterar esse comportamento. No entanto, o __tidyverse__ oferece um pacote excelente para resolver esse problema.
+
+## Pacote `stringr`
+
+Hadley Wickham criou o pacote `stringr` que adiciona mais funcionalidades ao pacote base e que torna o manuseio de *strings* algo bem mais consistente:
+
+[http://cran.r-project.org/web/packages/stringr/index.html](http://cran.r-project.org/web/packages/stringr/index.html)
+
+De acordo com a descrição do pacote:
+
+"Trata-se de um conjunto de *wrappers* que faz das funções *strings* do R mais consistentes, mais simples e fáceis de usar. Isso é feito assegurando que: os nomes da função e do argumentos sejam consistentes (e suas posições), que todas as funções tratem NAs e caracteres de tamanho zero de forma adequada, e a resposta da estrutura dos dados de cada função combine com a entrada da estrutura de dados de outras funções"
+
+Para instalar o `"stringr"` use a função `install.packages()`. Uma vez instalado, carregue para sua atual sessão com  `library()`:
+
+```{r install_stringr, message=FALSE, eval=FALSE}
+# instalando 'stringr'
+install.packages("stringr")
+
+# carregue 'stringr'
+library(stringr)
+```
+
+```{r load_stringr, echo=FALSE}
+library(stringr)
+```
+
+
+## Operações básicas com strings
+
+`"stringr"` fornece funções tanto para 1) manuseio básico quanto  2) para operações com expressões regulares. Nesse tutorial iremos cobrir aquelas funções que têm os manuseios básicos.
+
+A tabela seguinte contêm as funções básicas para operações com *strings*:
+
+| Função         | Descrição                               | Similar a     |
+|:---------------|:----------------------------------------|:--------------|
+| `str_c()`      | concatenação de *strings*               | `paste()`     |
+| `str_length()` | conta o número de caracteres            | `nchar()`     |
+| `str_sub()`    | extrai substrings                       | `substring()` |
+| `str_dup()`    | duplica caracteres                      | _nenhum_      |
+| `str_trim()`   | remove espaços anteriores e posteriores | _nenhum_      |
+| `str_pad()`    | preenche *strings*                      | _nenhum_      |
+| `str_wrap()`   | quebra linhas de parágrafos             | `strwrap()`   |
+| `str_trim()`   | remove espaços das extremidades         | _nenhum_      |
+
+
+Note que todas as funções no pacote `stringr` começam com `"str_"` seguidas por um termo associado à tarefa a ser desempenhada. Por exemplo,  `str_length()` retorna o número de caracteres (*length*) em uma *string*. Além disso, algumas funções foram pensadas para oferecer uma alternativa melhor para funções já existentes. Este é o caso de `str_length()` que foi pensada para substituir `nchar()`. 
+
+Outras funções, todavia, não possuem uma alternativa correspondente, tal como `str_dup()`, a qual permite a duplicação de caracteres.
+
+
+### Concatenação com`str_c()`
+
+Vamos começar com `str_c()`. Essa função é equivalente a `paste()` mas em vez de usar o espaço em branco como separador padrão, ela usa *string* vazia `""`, que é um separador mais comum quando estamos _colando_ (pasting) *strings*:
+
+```{r str_c_ex}
+# uso padrão
+str_c("Que", "a", "Força", "esteja", "com", "você")
+
+# removendo objetos de tamanho zero
+str_c("Que", "a", "Força", NULL, "esteja", "com", "você", character(0))
+```
+
+Observe as duas diferenças com relação à função `paste()`:  o separador é um espaço vazio e objetos de tamanho zero são silenciosamente removidos.
+
+Se você quiser alterar o separador padrão, você pode fazê-lo por meio da especificação do argumento `sep`:
+
+```{r str_join}
+# Alterando o separador
+str_c("Que", "a", "Força", "esteja", "com", "você", sep=" ")
+```
+
+
+
+### Número de caracteres com  `str_length()`
+
+Como mencionado anteriormente `str_length()` é equivalente a `nchar()`. Ambas as funções retornam o número de caracteres em uma *string* (não confunda com `length()` de um vetor). Comparado com `nchar()`, `str_length()`  tinha um comportamento mais consistente até recentemente, mas hoje as duas funções são equiparáveis, pois o problema de `nchar(NA)` retornar dois caracteres já foi solucionado na versão atual do R.
+
+```{r str_length_ex}
+# Texto com inclusão de NA
+um_texto <- c("um", "dois", "três", NA, "cinco")
+str_length(um_texto)
+```
+
+Além disso, `str_length()` possui a vantagem de converter fatores para caracteres, algo que `nchar()` não sabe como resolver:
+
+```{r str_length_with_factors, error=T}
+um_fator <- factor(c(1,1,1,2,2,2), labels = c("certo", "errado"))
+um_fator
+
+# tente 'nchar' em um fator
+nchar(um_fator)
+
+# agora compare com 'str_length'
+str_length(um_fator)
+```
+
+
+### Substring com `str_sub()`
+
+Para extrair *substrings* de um vetor de caracteres `stringr` fornece `str_sub()` que é equivalente a `substring()` no R base. A função `str_sub()` tem o seguinte uso:
+
+```
+str_sub(string, start = 1L, end = -1L)
+
+```
+
+Os três argumentos na função são: um vetor `string`, um valor `start` indicando a posição do primeiro caractere para dar um *substring* e um valor `end` indicando a posição do último caractere. Segue um exemplo simples com uma única *string* da qual os caracteres 1 a 5 são extraídos:
+
+```{r str_sub_ex1}
+lorem <- "Lorem Ipsum"
+
+# aplicar 'str_sub'
+str_sub(lorem, start = 1, end = 5)
+
+# equivalente a'substring'
+substring(lorem, first = 1, last = 5)
+
+# outro exemplo
+str_sub("adeus", 1:3)
+```
+
+Veja que no último exemplo foi utilizado um vetor com valores de 1 a 3 como segundo argumento `start`. A função extrai três substrings, a primeira começando com a posição 1, a segunda começando com a posição 2 e a terceira com a posição 3.
+
+Uma caracteristica interessante de `str_sub()` é sua habilidade de trabalhar com índices negativos nas posições `start` e `end`. Quando usamos a posição negativa, a função `str_sub()` começa a contar do último caractere: 
+
+```{r str_sub_ex2}
+curso = c("ibpad", "capacitação", "aprendendo", "caracteres")
+
+# 'str_sub' com posições negativas
+str_sub(curso, start = -4, end = -1)
+
+# comparado com substring (inútil)
+substring(curso, first = -4, last = -1)
+```
+
+Da da mesma forma que  `substring()`, nós podemos fornecer para a função `str_sub()` um conjunto de posições que serão recicladas sobre a *string*. Mais que isso, nós podemos dar a `str_sub()` uma sequência negativa, algo que  `substring()` ignora:
+
+```{r str_sub_ex3}
+# extraindo sequencialmente
+str_sub(lorem, seq_len(nchar(lorem)))
+substring(lorem, seq_len(nchar(lorem)))
+
+# substrings invertidas com posições negativas
+str_sub(lorem, -seq_len(nchar(lorem)))
+substring(lorem, -seq_len(nchar(lorem)))
+```
+
+Nós podemos usar  `str_sub()` também para substituir substrings:
+
+```{r str_sub_ex4}
+# substituindo 'Lorem' com 'Nullam'
+lorem <- "Lorem Ipsum"
+str_sub(lorem, 1, 5) <- "Nullam"
+lorem
+
+# substituindo com posições negativas
+lorem <- "Lorem Ipsum"
+str_sub(lorem, -1) <- "Nullam"
+lorem
+
+# substituições múltiplas 
+lorem <- "Lorem Ipsum"
+str_sub(lorem, c(1,7), c(5,8)) <- c("Nullam", "Enim")
+lorem
+```
+
+
+### Duplicação com `str_dup()`
+
+
+Uma operação comum ao manusear caracteres é _duplicação_. O problema é
+que o R não possui uma função específica para esse fim. O `stringr` faz assim:` str_dup()` duplica e concatena *strings* dentro de um vetor de caracteres.
+Seu uso requer dois argumentos::
+
+```
+str_dup(string, vezes)
+```
+
+
+A primeira entrada é o `string` que você quer se duplicar. A segunda entrada,
+`vezes`, é o número de vezes para duplicar cada *string*:
+
+```{r str_dup_ex}
+# uso padrão
+str_dup("amizade", 3)
+
+# uso com diferente número de 'vezes'
+str_dup("adeus", 1:3)
+
+# uso com um vetor de strings
+palavras <- c("lorem", "ipsum", "dolor", "sit", "amet")
+str_dup(palavras, 2)
+
+str_dup(palavras, 1:5)
+```
+
+
+### Preenchimento com `str_pad()`
+
+Outra função útil que podemos encontrar em `stringr` é `str_pad ()` para
+_preencher_ uma *string*. O uso padrão tem a seguinte forma:
+
+```
+str_pad(string, width, side = "left", pad = " ")
+```
+
+A idéia de `str_pad ()` é tomar uma seqüência de caracteres e colocá-la no começo ou no fim da *string* com uma "comprimento" total especificado. O caractere de preenchimento padrão é um espaço (`pad =" "`) e, consequentemente, a sequência retornada estará ou alinhada à esquerda (`side ="left"`), alinhada à direita (`side ="right"`), ou
+a ambos (`side ="both"`). 
+
+Vejamos um exemplo:
+
+```{r str_pad_ex}
+# uso padrão
+str_pad("amigo", width = 7)
+
+# preenche os dois lados
+str_pad("adeus", width = 7, side = "both")
+
+# posicionando à esquerda com '#'
+str_pad("hashtag", width = 8, pad = "#")
+
+# prenche os dois lados com '-'
+str_pad("hashtag", width = 9, side = "both", pad = "-")
+```
+
+
+### Wrapping com `str_wrap()`
+
+A função `str_wrap ()` é equivalente a `strwrap ()` que pode ser usada para quebrar  uma *string* a fim de formatar parágrafos. A idéia de _wrap_ (equivalente aqui a quebrar) uma string (longa) é primeiramente, dividi-la em parágrafos de acordo com o "comprimento" fornecido e, em seguida, adicionar a indentação especificada em cada linha (primeira linha com `recuo`, seguindo linhas com `exdent`). O uso padrão tem o seguinte formato:
+
+```
+str_wrap(string, width = 80, indent = 0, exdent = 0)
+```
+
+
+Por exemplo, considere a seguinte citação (de Guimarães Rosa) convertida em
+um parágrafo:
+
+```{r douglas_adams, tidy=FALSE}
+# citação (por  Guimarães Rosa)
+uma_citacao <- c(
+  "O correr da vida embrulha tudo.",
+"A vida é assim: esquenta e esfria,",
+"aperta e daí afrouxa,",
+"sossega e depois desinquieta.",
+"O que ela quer da gente é coragem")
+
+# Conversão em parágrafo
+uma_citacao<-paste(uma_citacao,collapse=" ")
+
+```
+
+Agora, digamos que se deseja exibir o texto de `uma_citacao` dentro uma especificação prévia de comprimento da linha (por exemplo, comprimento 3). Você pode fazer isso aplicando `str_wrap ()` e definindo o argumento `width = 30`
+
+```{r str_wrap_ex1, tidy=FALSE}
+# mostra o parágrafo com width=30
+cat(str_wrap(uma_citacao, width = 30))
+```
+
+
+Além de exibir um parágrafo (longo) em várias linhas, você também pode desejar
+adicionar alguma indentação. Veja como você pode recuar a primeira linha, bem como as linhas seguintes:
+
+```{r str_wrap_ex2, tidy=FALSE}
+# exibir parágrafo com indentação 2 na primeira linha
+cat(str_wrap(uma_citacao, width = 30, indent = 2), "\n")
+
+# exibir parágrafo com identeção 3 nas linhas seguintes
+cat(str_wrap(uma_citacao, width = 30, exdent = 3), "\n")
+```
+
+
+
+### Trimming with `str_trim()`
+
+
+Uma das tarefas típicas do processamento de *strings* é a de analisar um texto em palavras singularizadas. Normalmente, você termina com palavras que têm espaços em branco, chamados _whitespaces_, em qualquer uma das extremidades da palavra. Nessa situação, você pode usar a função `str_trim()`  para remover qualquer número de espaços em branco nas extremidades de uma *string*. Seu uso requer apenas dois argumentos:
+
+```
+str_trim(string, side = "both")
+```
+A primeira entrada é o `string` para ser ajustada, e a segunda entrada indica
+o `lado` do qual o espaço em branco será removido.
+
+Considere o seguinte vetor de *strings*, alguns dos quais têm espaços em branco ou à esquerda, à direita ou em ambos os lados. Segue o que  `str_trim ()` fará
+com  eles em diferentes chamadas  do `lado`
+
+```{r steal, tidy=FALSE}
+# texto com espaços em branco
+texto_ruim <- c("Este", " exemplo ", "tem muitos   ", "   espaços em branco ")
+
+# remover os espaços em branco do lado esquerdo
+str_trim(texto_ruim, side = "left")
+
+# remover os espaços em branco do lado direito
+str_trim(texto_ruim, side = "right")
+
+# remover os espaços em branco de ambos os lados
+str_trim(texto_ruim, side = "both")
+```
